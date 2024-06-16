@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #77d1d1 3px solid;
+        }
+        header a, footer a {
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 16px;
+        }
+        header ul {
+            padding: 0;
+            list-style: none;
+        }
+        header li {
+            float: left;
+            display: inline;
+            padding: 0 20px 0 20px;
+        }
+        .menu, .cart, .orders {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .menu h2, .cart h2, .orders h2 {
+            margin-top: 0;
+        }
+        .menu ul, .cart ul, .orders ul {
+            list-style: none;
+            padding: 0;
+        }
+        .menu li, .cart li, .orders li {
+            padding: 10px;
+            border-bottom: 1px #ccc solid;
+        }
+        .menu li:last-child, .cart li:last-child, .orders li:last-child {
+            border-bottom: none;
+        }
+        .menu button, .cart button, .logout-button {
+            background: #333;
+            color: #fff;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Customer Dashboard</h1>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/auth/login.html">Login</a></li>
+                <li><a href="/customer.html">Dashboard</a></li>
+                <li><button class="logout-button" onclick="logout()">Logout</button></li>
+            </ul>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="menu">
+            <h2>Menu</h2>
+            <ul id="menuList">
+                <!-- Menu items will be populated here -->
+            </ul>
+        </div>
+        <div class="cart">
+            <h2>Cart</h2>
+            <ul id="cartList">
+                <!-- Cart items will be populated here -->
+            </ul>
+            <button id="placeOrderButton" onclick="placeOrder()" style="display:none;">Place Order</button>
+        </div>
+        <div class="orders">
+            <h2>Previous Orders</h2>
+            <ul id="orderList">
+                <!-- Previous orders will be populated here -->
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>Steakz &copy; 2024</p>
+    </footer>
+
+    <script>
+        let cart = [];
+
+        // Check if the user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Please log in first.');
+            window.location.href = '/auth/login.html';
+        } else {
+            document.getElementById('placeOrderButton').style.display = 'block';
+        }
+
+        // Fetch and display menu items
+        fetch('/customer/menu')
+            .then(response => response.json())
+            .then(data => {
+                const menuList = document.getElementById('menuList');
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${item.item} - $${item.price} <button onclick="addToCart('${item.item}', ${item.price})">Order</button>`;
+                    menuList.appendChild(li);
+                });
+            });
+
+        // Fetch and display previous orders
+        fetch('/customer/orders', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const orderList = document.getElementById('orderList');
+                data.forEach(order => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `Order ID: ${order.id} - Items: ${order.items.map(item => `${item.item} ($${item.price})`).join(', ')} - Total: $${order.total}`;
+                    orderList.appendChild(li);
+                });
+            });
+
+        // Add item to cart
+        function addToCart(item, price) {
+            cart.push({ item, price });
+            displayCart();
+        }
+
+        // Display cart items
+        function displayCart() {
+            const cartList = document.getElementById('cartList');
+            cartList.innerHTML = '';
+            cart.forEach((cartItem, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `${cartItem.item} - $${cartItem.price} <button onclick="removeFromCart(${index})">Remove</button>`;
+                cartList.appendChild(li);
+            });
+        }
+
+        // Remove item from cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            displayCart();
+        }
+
+        // Place order
+        function placeOrder() {
+            fetch('/customer/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(cart)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Order placed successfully!');
+                    cart = [];
+                    displayCart();
+                    fetchOrders();
+                } else {
+                    alert('Failed to place order.');
+                }
+            });
+        }
+
+        // Fetch and display previous orders
+        function fetchOrders() {
+            fetch('/customer/orders', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const orderList = document.getElementById('orderList');
+                    orderList.innerHTML = '';
+                    data.forEach(order => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `Order ID: ${order.id} - Items: ${order.items.map(item => `${item.item} ($${item.price})`).join(', ')} - Total: $${order.total}`;
+                        orderList.appendChild(li);
+                    });
+                });
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            alert('Logged out successfully');
+            window.location.href = '/auth/login.html';
+        }
+    </script>
+</body>
+</html>

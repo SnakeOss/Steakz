@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <script>
+    async function updateRole() {
+      const username = document.getElementById('edit-username').value;
+      const role = document.getElementById('role').value;
+
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('/auth/update-role', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username, role }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert('Role updated successfully');
+      } else {
+        alert(data.message || 'Failed to update role');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/admin_login.html';
+    }
+  </script>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+  <h2>Update User Role</h2>
+  <input type="text" id="edit-username" placeholder="Username">
+  <select id="role">
+    <option value="customer">Customer</option>
+    <option value="moderator">Moderator</option>
+    <option value="admin">Admin</option>
+  </select>
+  <button onclick="updateRole()">Update Role</button>
+
+  <h2>Logout</h2>
+  <button onclick="logout()">Logout</button>
+</body>
+</html>
